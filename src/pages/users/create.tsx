@@ -1,7 +1,9 @@
 import { Box, Divider, Flex, Heading, HStack, SimpleGrid, VStack, Button } from '@chakra-ui/react';
 import Link from 'next/link';
-import { Input } from '../../components/Form/Input';
+import { useRouter } from 'next/router';
+import { useMutation } from 'react-query';
 
+import { Input } from '../../components/Form/Input';
 import { Header } from '../../components/Header';
 import { SideBar } from '../../components/SideBar';
 
@@ -9,6 +11,8 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import * as yup from "yup";
+import { api } from '../../services/api';
+import { queryClient } from '../../services/queryClient';
 
 type Inputs = {
   name: string,
@@ -18,6 +22,23 @@ type Inputs = {
 };
 
 export default function CreateUser() {
+
+  const router = useRouter();
+
+  const createUser = useMutation(async (user: Inputs ) => {
+    const response = await api.post('users', {
+      user: {
+        ...user,
+        created_at: new Date()
+      }
+    })
+
+    return response.data.user;
+  }, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('users')
+    }
+  });
 
   const schema = yup.object().shape({
     name: yup.string().required('Campo obrigatório.'),
@@ -33,8 +54,9 @@ export default function CreateUser() {
   });
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log(data)
+    await createUser.mutateAsync(data);
+
+    router.push('/users');
   }
 
   return (
